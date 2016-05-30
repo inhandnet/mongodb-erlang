@@ -241,11 +241,20 @@ count(Connection, Coll, Selector) ->
 %% @doc Count selected documents up to given max number; 0 means no max.
 %%     Ie. stops counting when max is reached to save processing time.
 -spec count(pid(), colldb(), selector(), integer()) -> integer().
-count(Connection, Coll, Selector, Limit) when not is_binary(Coll) ->
+count(Connection, {Db, Coll}, Selector, Limit) when not is_binary(Coll) ->
+  count(Connection, {Db, mc_utils:value_to_binary(Coll)}, Selector, Limit);
+count(Connection, Coll, Selector, Limit) when not is_binary(Coll) and not is_tuple(Coll) ->
   count(Connection, mc_utils:value_to_binary(Coll), Selector, Limit);
+
+count(Connection, {Db, Coll}, Selector, Limit) when Limit =< 0 ->
+  {true, #{<<"n">> := N}} = command(Connection, {<<"count">>, Coll, <<"query">>, Selector}, Db),
+  trunc(N);
 count(Connection, Coll, Selector, Limit) when Limit =< 0 ->
   {true, #{<<"n">> := N}} = command(Connection, {<<"count">>, Coll, <<"query">>, Selector}),
   trunc(N);
+count(Connection, {Db, Coll}, Selector, Limit) ->
+  {true, #{<<"n">> := N}} = command(Connection, {<<"count">>, Coll, <<"query">>, Selector, <<"limit">>, Limit}, Db),
+  trunc(N); % Server returns count as float
 count(Connection, Coll, Selector, Limit) ->
   {true, #{<<"n">> := N}} = command(Connection, {<<"count">>, Coll, <<"query">>, Selector, <<"limit">>, Limit}),
   trunc(N). % Server returns count as float
