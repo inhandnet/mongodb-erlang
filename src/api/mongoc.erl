@@ -64,7 +64,7 @@
 -spec connect(seed(), connectoptions(), workeroptions()) -> {ok, Pid :: pid()} | ignore | {error, Reason :: term()}.
 connect(Seeds, Options, WorkerOptions) ->
   ok = application:ensure_started(poolboy),
-  {ok, _} = mc_pool_sup:start_link(),
+  mc_pool_sup:start_link(),
   mc_topology:start_link(Seeds, Options, WorkerOptions).
 
 -spec disconnect(pid()) -> ok.
