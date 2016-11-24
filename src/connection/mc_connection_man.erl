@@ -22,15 +22,23 @@ request_worker(Connection, Request) ->  %request to worker
   Timeout = mc_utils:get_timeout(),
   reply(gen_server:call(Connection, Request, Timeout)).
 
--spec request_raw(port(), mc_worker_api:database(), mongo_protocol:message(), module()) -> 
-	ok | {non_neg_integer(), [map()]}.
+recv(Socket, Timeout, NetModule) ->
+  recv(Socket, Timeout, NetModule, <<>>).
+recv(Socket, Timeout, NetModule, Rest) ->
+  {ok, Packet} = NetModule:recv(Socket, 0, Timeout),
+  case mc_worker_logic:decode_responses(<<Rest/binary, Packet/binary>>) of
+    {[], Unfinished} -> recv(Socket, Timeout, NetModule, Unfinished);
+    {Responses, _} -> Responses
+  end.
+
+-spec request_raw(port(), mc_worker_api:database(), mongo_protocol:message(), module()) ->
+  ok | {non_neg_integer(), [map()]}.
 request_raw(Socket, Database, Request, NetModule) ->
   Timeout = mc_utils:get_timeout(),
   ok = set_opts(Socket, NetModule, false),
   {ok, _} = mc_worker_logic:make_request(Socket, NetModule, Database, Request),
-  {ok, Packet} = NetModule:recv(Socket, 0, Timeout),
+  Responses = recv(Socket, Timeout, NetModule),
   ok = set_opts(Socket, NetModule, true),
-  {Responses, _} = mc_worker_logic:decode_responses(Packet),
   {_, Reply} = hd(Responses),
   reply(Reply).
 
