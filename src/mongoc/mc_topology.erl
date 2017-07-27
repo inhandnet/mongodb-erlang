@@ -706,7 +706,7 @@ select_candidate(secondary, _, List) ->
 pick_random([Item], 1) ->
   Item;
 pick_random(List, N) ->
-  lists:nth(random:uniform(N), List).
+  lists:nth(rand:uniform(N), List).
 
 
 
